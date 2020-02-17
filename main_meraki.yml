@@ -1,0 +1,22 @@
+---
+- name: START CONFIGURATION
+  connection: local
+  hosts: localhost
+  gather_facts: no
+
+  tasks:
+  
+  - name: Query information about Organizations associated to the user
+    meraki_organization:
+      auth_key: abc123
+      state: query
+    delegate_to: localhost
+    register: meraki_name
+  
+  - name: List all networks associated to the Organization
+    meraki_network:
+      auth_key: abc123
+      state: query
+      org_name: "{{ meraki_name.data[0].name }}"
+    delegate_to: localhost
+    register: meraki_all_net
