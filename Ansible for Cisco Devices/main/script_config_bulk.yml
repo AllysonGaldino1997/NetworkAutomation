@@ -1,0 +1,99 @@
+---
+- hosts: SWITCH_ACESSO
+  gather_facts: true
+  connection: local
+
+# Variaveis de autenticação Usuario e senha
+  vars_prompt:
+  - name: "mgmt_username"
+    prompt: "Username"
+    private: no
+  - name: "mgmt_password"
+    prompt: "Password"
+
+  tasks:
+
+# Modulo de autenticação
+   - name: SYS | Define provider
+     set_fact:    
+       provider: 
+        host: "{{ inventory_hostname }}"
+        username: "{{ mgmt_username }}"
+        password: "{{ mgmt_password }}"
+        port: 22
+    
+# Comando show run no alvo
+   - name: backup pré-janela
+     ios_command:
+       provider: "{{ provider }}"
+       commands:
+        - show run
+     register: backup
+
+# Salvando saída show run
+   - name: save backup 
+     copy:
+      content: "{{ backup.stdout[0] }}"
+      dest: "/etc/ansible/backup/Pre_janela/BACKUP_{{ inventory_hostname }}.txt"
+
+# renomeando arquivo backup com a data
+   - name: copy and rename file
+     shell:
+       cmd: cp /etc/ansible/backup/Pre_janela/BACKUP_{{ inventory_hostname }}.txt /etc/ansible/backup/Pre_janela/bkp_{{ inventory_hostname }}_$(date +"%d-%m-%Y-%H-%M").txt
+      
+# removendo arquivo backup antigo
+   - name: remove old file
+     shell:
+       cmd: rm /etc/ansible/backup/Pre_janela/BACKUP_{{ inventory_hostname }}.txt
+      
+# Configurações
+   - name: Deploy config
+     ios_config:
+      provider: "{{ provider }}"
+      lines: 
+      - vtp mode transparent
+      - spanning-tree vlan 1,10,20,30,40 priority 61440
+      - vlan 10
+      - vlan 20
+      - vlan 30
+      - vlan 40
+      - interface range ethernet 0/1 - 3
+      - switchport mode access
+      - switchport access vlan 10
+      - switchport voice vlan 20
+      - switchport port-security
+      - switchport port-security maximum 2
+      - do wr
+      
+
+ # Gerando arquivo de configuração pós mudanças
+   - name: arquivo de configuração pós janela
+     ios_command:
+       provider: "{{ provider }}"
+       commands:
+        - show run
+        - show vlan brief
+        - show ip int b
+     register: backup2
+
+  # Salvando nova config 
+   - name: save new config
+     copy:
+      content: "{{ backup.stdout[0] }}"
+      dest: "/etc/ansible/backup/Pos_janela/BACKUP_NEW_CONFIG_{{ inventory_hostname }}.txt"
+
+  # renomeando arquivo backup com a data
+   - name: copy and rename file
+     shell:
+       cmd: cp /etc/ansible/backup/Pos_janela/BACKUP_NEW_CONFIG_{{ inventory_hostname }}.txt /etc/ansible/backup/Pos_janela/BACKUP_NEW_CONFIG_{{ inventory_hostname }}_$(date +"%d-%m-%Y-%H-%M").txt
+      
+  # removendo arquivo backup antigo
+   - name: remove old file
+     shell:
+       cmd: rm /etc/ansible/backup/Pos_janela/BACKUP_NEW_CONFIG_{{ inventory_hostname }}.txt
+      
+
+
+    
+ 
+       
