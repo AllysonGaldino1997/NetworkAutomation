@@ -1,0 +1,26 @@
+---
+- name: first playbook with when
+  hosts: MANUTENCAO
+  gather_facts: yes
+  connection: network_cli
+
+  tasks:
+
+   - name: save config
+     ios_command:
+       commands:
+         - show run 
+         - show cdp neighbor
+         - show int status
+     register: output
+
+   - name: Register output "show run" for backup
+     copy:
+      content: "{{ output.stdout[0] }}"
+      dest: "/etc/ansible/backup/Parada_eletrica_CDs14_02_2021/BACKUP_{{ inventory_hostname }}.txt"
+
+
+ 
+    
+ 
+       
